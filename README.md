@@ -244,3 +244,5 @@ If you use this engine in your research, please cite:
   url = {https://github.com/yup-VARUN/computational-lithography-engine}
 }
 ```
+
+A good read [Nature Article](https://www.nature.com/articles/s41377-025-01923-w)
