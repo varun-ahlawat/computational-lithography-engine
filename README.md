@@ -2,12 +2,58 @@
 
 A differentiable physics engine for computational lithography, simulating Fraunhofer diffraction and implementing inverse mask optimization (in PyTorch).
 
+## Visual Proof — It Works!
+
+### Inverse Mask Optimization (Animated)
+
+The engine automatically finds the optimal photomask that produces any desired chip pattern. Watch the optimizer converge in real time:
+
+![Inverse lithography optimization — cross pattern](docs/images/optimization_cross.gif)
+
+![Inverse lithography optimization — ring pattern](docs/images/optimization_ring.gif)
+
+![Inverse lithography optimization — diamond pattern](docs/images/optimization_diamond.gif)
+
+### Arbitrary Input Shapes
+
+The engine handles **any** target geometry — L-shapes, T-shapes, rings, crosses, diamonds, zigzags, and more:
+
+![Arbitrary shapes gallery](docs/images/arbitrary_shapes_gallery.png)
+
+### Multiple Wavelengths & Numerical Apertures
+
+Forward diffraction simulation across different lithography configurations — DUV (193 nm), KrF (248 nm), and EUV (13.5 nm) — with varying numerical apertures:
+
+![Forward diffraction comparison](docs/images/forward_diffraction_comparison.png)
+
+### Arbitrary Dimensions
+
+Works with any mask size — demonstrated here at 64×64, 128×128, and 256×256:
+
+![Multi-size demonstration](docs/images/multi_size_demo.png)
+
+### Thermal Compensation (Silicon Wafer Heating & Cooling)
+
+During lithography the wafer is hot (200 °C). When it cools to operating temperature (80 °C), silicon contracts. Without compensation the printed pattern shrinks and no longer matches the target. The engine pre-compensates the mask so the **cooled-down chip perfectly matches the intended geometry**:
+
+![Thermal compensation](docs/images/thermal_compensation.png)
+
+### Thermal-Aware Optimization (Animated)
+
+Full thermal-aware inverse lithography: the optimizer accounts for silicon thermal expansion coefficients so the pattern at 80 °C matches the target:
+
+![Thermal-aware optimization animation](docs/images/thermal_optimization.gif)
+
+---
+
 ## Overview
 
 This engine provides a complete framework for computational lithography simulations, including:
 
 - **Fraunhofer Diffraction Simulation**: Physics-based modeling of far-field diffraction patterns using Fast Fourier Transform (FFT)
 - **Inverse Lithography Technology (ILT)**: Gradient-based optimization to find optimal mask patterns
+- **Thermal Expansion Modeling**: Silicon wafer heating/cooling effects with temperature-dependent CTE
+- **Thermal-Aware Optimization**: Pre-compensates masks so the cooled chip matches the target geometry
 - **Differentiable Architecture**: Built on PyTorch for automatic differentiation and GPU acceleration
 - **Numerical Aperture Modeling**: Realistic optical system constraints
 
@@ -28,6 +74,7 @@ pip install -e .
 - PyTorch >= 1.9.0
 - NumPy >= 1.19.0
 - Matplotlib >= 3.3.0
+- imageio >= 2.9.0 (for GIF generation only)
 
 ## Quick Start
 
@@ -78,6 +125,42 @@ results = optimizer.optimize(
 optimized_mask = results['mask']
 ```
 
+### Thermal-Aware Optimization
+
+```python
+from litho_engine import ThermalExpansionModel
+from litho_engine.optimizer import ThermalAwareMaskOptimizer
+
+# Define thermal model: wafer at 200°C during exposure, cooled to 80°C
+thermal = ThermalExpansionModel(
+    process_temp=200.0,   # °C during lithography
+    operating_temp=80.0   # °C final chip temperature
+)
+
+# The optimizer automatically pre-compensates for thermal contraction
+optimizer = ThermalAwareMaskOptimizer(
+    diffraction_model=diffraction,
+    mask_shape=(128, 128),
+    thermal_model=thermal,
+    learning_rate=0.05,
+    regularization=0.005
+)
+
+results = optimizer.optimize(target=target, num_iterations=200, verbose=True)
+# The cooled-down chip will match the target geometry
+```
+
+## Generate Visualizations
+
+To regenerate all images and animations:
+
+```bash
+pip install imageio
+python examples/generate_visualizations.py
+```
+
+Output is saved to `docs/images/`.
+
 ## Examples
 
 Run the provided examples to see the engine in action:
@@ -88,6 +171,9 @@ python examples/forward_diffraction.py
 
 # Inverse mask optimization
 python examples/inverse_optimization.py
+
+# Generate all visualizations and animations
+python examples/generate_visualizations.py
 ```
 
 ## Architecture
@@ -122,6 +208,23 @@ Enhanced optimizer with:
 - Adaptive learning rate scheduling
 - Early stopping to prevent overfitting
 - Better convergence for complex patterns
+
+#### 4. ThermalExpansionModel
+
+Models silicon wafer thermal expansion/contraction:
+
+- Temperature-dependent CTE using polynomial fit (Okada & Tokumaru, 1984)
+- Computes linear strain from process to operating temperature
+- Applies geometric scaling via differentiable affine transforms
+- Pre-compensates patterns so cooled chips match intended geometry
+
+#### 5. ThermalAwareMaskOptimizer
+
+Combines inverse lithography with thermal compensation:
+
+- Automatically expands the optimization target to account for cooling contraction
+- Ensures the final chip at operating temperature matches the desired pattern
+- Uses the same adaptive LR scheduling and early stopping as AdaptiveMaskOptimizer
 
 ## Physics Background
 
@@ -164,6 +267,22 @@ Where:
 - `R` is the regularization term (e.g., total variation)
 - `λ` is the regularization weight
 
+### Thermal Expansion
+
+Silicon's coefficient of thermal expansion (CTE) varies with temperature:
+
+```
+CTE(T) = a₀ + a₁·T + a₂·T²
+```
+
+The linear thermal strain from cooling:
+
+```
+ε = -∫(T_operating to T_process) CTE(T) dT
+```
+
+The mask is pre-compensated by a scale factor of `1/(1 + ε)` so that after the wafer contracts upon cooling to the operating temperature, the final pattern geometry matches the intended target.
+
 ## Testing
 
 Run the test suite:
@@ -177,6 +296,8 @@ Tests cover:
 - Gradient flow verification
 - Optimization convergence
 - Edge cases and constraints
+- Thermal expansion model (CTE, strain, contraction, pre-compensation)
+- Thermal-aware mask optimization
 
 ## Applications
 
@@ -231,6 +352,7 @@ MIT License
 - Wong, A. K. K. (2001). *Resolution Enhancement Techniques in Optical Lithography*
 - Goodman, J. W. (2005). *Introduction to Fourier Optics*
 - Ma, X., & Arce, G. R. (2010). "Computational Lithography"
+- Okada, Y., & Tokumaru, Y. (1984). "Precise determination of lattice parameter and thermal expansion coefficient of silicon between 300 and 1500 K" — *J. Appl. Phys.* 56, 314
 
 ## Citation
 

@@ -259,3 +259,57 @@ class AdaptiveMaskOptimizer(MaskOptimizer):
             'loss_history': loss_history,
             'final_loss': best_loss
         }
+
+
+class ThermalAwareMaskOptimizer(AdaptiveMaskOptimizer):
+    """
+    Mask optimizer that accounts for thermal expansion/contraction of the
+    silicon wafer. Optimizes the mask so that the final cooled-down pattern
+    (at operating temperature) matches the intended target geometry.
+
+    The optimization target is pre-compensated: since the wafer contracts
+    when cooling from process temperature to operating temperature, the
+    mask must produce a slightly enlarged pattern at process temperature
+    so that after contraction the result matches the target.
+
+    Args:
+        diffraction_model: The forward diffraction model
+        mask_shape (tuple): Shape of the mask (height, width)
+        thermal_model: ThermalExpansionModel instance
+        learning_rate (float): Learning rate for optimization
+        regularization (float): Regularization weight
+        use_scheduler (bool): Whether to use LR scheduling
+    """
+
+    def __init__(self, diffraction_model, mask_shape, thermal_model,
+                 learning_rate=0.01, regularization=0.001, use_scheduler=True):
+        super().__init__(diffraction_model, mask_shape, learning_rate,
+                         regularization, use_scheduler)
+        self.thermal_model = thermal_model
+
+    def optimize(self, target, num_iterations=100, loss_type='mse',
+                 threshold=None, verbose=True, early_stopping_patience=30):
+        """
+        Optimize mask with thermal compensation.
+
+        The target is the desired pattern at operating temperature (cooled).
+        We pre-compensate by expanding the target to account for thermal
+        contraction, then optimize the mask to produce this expanded pattern.
+        After the wafer cools, the pattern contracts back to the intended target.
+        """
+        # Pre-compensate target: expand it so after thermal contraction
+        # the result matches the original target
+        compensated_target = self.thermal_model.apply_thermal_precompensation(target)
+
+        if verbose:
+            info = self.thermal_model.get_info()
+            print(f"Thermal compensation: {info['process_temp_C']}°C → "
+                  f"{info['operating_temp_C']}°C "
+                  f"(contraction: {info['contraction_ppm']:.1f} ppm, "
+                  f"scale: {info['scale_factor']:.6f})")
+
+        return super().optimize(
+            compensated_target, num_iterations=num_iterations,
+            loss_type=loss_type, threshold=threshold, verbose=verbose,
+            early_stopping_patience=early_stopping_patience
+        )
