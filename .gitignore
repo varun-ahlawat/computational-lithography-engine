@@ -40,8 +40,9 @@ env/
 htmlcov/
 
 # Output files
-*.png
-*.jpg
-*.pdf
 results/
 outputs/
+
+# Allow committed images and animations in docs/images/
+!docs/images/*.png
+!docs/images/*.gif

@@ -9,5 +9,6 @@ __version__ = "0.1.0"
 
 from .diffraction import FraunhoferDiffraction
 from .optimizer import MaskOptimizer
+from .thermal import ThermalExpansionModel
 
-__all__ = ["FraunhoferDiffraction", "MaskOptimizer"]
+__all__ = ["FraunhoferDiffraction", "MaskOptimizer", "ThermalExpansionModel"]
