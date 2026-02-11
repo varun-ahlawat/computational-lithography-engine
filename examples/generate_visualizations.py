@@ -31,6 +31,7 @@ from litho_engine.optimizer import AdaptiveMaskOptimizer, ThermalAwareMaskOptimi
 from litho_engine.diffraction import create_test_mask
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'docs', 'images')
+FINAL_FRAME_HOLD_COUNT = 15
 
 
 def ensure_output_dir():
@@ -190,7 +191,7 @@ def generate_optimization_animation(pattern_name='cross', size=128,
             buf.close()
 
     # Hold final frame longer
-    for _ in range(15):
+    for _ in range(FINAL_FRAME_HOLD_COUNT):
         frames.append(frames[-1])
 
     gif_path = os.path.join(OUTPUT_DIR, gif_name)
@@ -545,7 +546,7 @@ def generate_thermal_optimization_animation(size=128, n_iterations=200):
             plt.close(fig)
             buf.close()
 
-    for _ in range(15):
+    for _ in range(FINAL_FRAME_HOLD_COUNT):
         frames.append(frames[-1])
 
     gif_path = os.path.join(OUTPUT_DIR, 'thermal_optimization.gif')
